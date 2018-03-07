@@ -13,7 +13,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 # Installation
 
+> This code is very fresh- it is functional and has been tested to work, but the installation and configuration will require some level of knowledge of configuring variable values in scripts and know-how on how Kerberos/PAM/AD perform password change management.  This is mainly because I make no claims that I am a technical writer, so I may be covering configuration in broad strokes...
+
 (Under Construction)
+
 ## Password Server
 * The password server needs to have downloaded password hash lists provided to it.  These should sit in the `./db` folder.  A great place to start for your breached passwords is [https://haveibeenpwned.com/Passwords], Thanks to Troy Hunt for all his efforts (he is in large part the inspiration behind this project).
 * Also, make sure you have a valid key/certificate chain.  These two files should have their paths matched with the `SSLCertFile` and `SSLKeyFile` variables.
