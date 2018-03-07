@@ -30,7 +30,7 @@ from json import dumps
 
 SSLCertFile='./localhost.cer'
 SSLKeyFile='./localhost.key'
-SSLKeyFilePassword='jamaicanhotrod'
+SSLKeyFilePassword='<password>'
 
 ListenPort = 443
 ListenInterface = '0.0.0.0'
