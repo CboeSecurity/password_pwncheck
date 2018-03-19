@@ -224,11 +224,11 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	CopyMemory(lpszName, fullName->Buffer, min(fullName->Length, MAXFULLNAMESIZE));
 	UNICODE_STRING us_fullName = { fullName->Length + sizeof(WCHAR), MAXFULLNAMESIZE, lpszName };
 
-	SecureZeroMemory(accountName->Buffer, accountName->Length);
-	SecureZeroMemory(fullName->Buffer, fullName->Length);
-	SecureZeroMemory(password->Buffer, password->Length);
-	password->Length = 0;
-	password->MaximumLength = 0;
+	//SecureZeroMemory(accountName->Buffer, accountName->Length);
+	//SecureZeroMemory(fullName->Buffer, fullName->Length);
+	//SecureZeroMemory(password->Buffer, password->Length);
+	//password->Length = 0;
+	//password->MaximumLength = 0;
 
 	// if enabled, go ahead and prepare the file based logging
 	FILE* flog = NULL;
@@ -444,9 +444,8 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 
 						wBufLen = MultiByteToWideChar(CP_UTF8, 0, &pszOutBuffer[dwoffset], dwSize, wBuffer, wBufLen);
 
-						EventDataDescCreate(&EvtDescs[0], accountName->Buffer, ((accountName->Length + 1) * sizeof(WCHAR)));
+						EventDataDescCreate(&EvtDescs[0], us_accountName.Buffer, ((us_accountName.Length + 1) * sizeof(WCHAR)));
 						EventDataDescCreate(&EvtDescs[1], &dwCode, sizeof(DWORD));
-						EventDataDescCreate(&EvtDescs[2], L"TEST", 10);
 						EventDataDescCreate(&EvtDescs[2], wBuffer, (wBufLen + 1) * sizeof(WCHAR));
 
 						regRet = EventWrite(EvtH, &EVT_PASSWORD_ACCEPTED, 3, EvtDescs);
@@ -471,7 +470,7 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 
 						wBufLen = MultiByteToWideChar(CP_UTF8, 0, &pszOutBuffer[dwoffset], dwSize, wBuffer, wBufLen);
 
-						EventDataDescCreate(&EvtDescs[0], accountName->Buffer, ((accountName->Length + 1) * sizeof(WCHAR)));
+						EventDataDescCreate(&EvtDescs[0], us_accountName.Buffer, ((us_accountName.Length + 1) * sizeof(WCHAR)));
 						EventDataDescCreate(&EvtDescs[1], &dwCode, sizeof(DWORD));
 						EventDataDescCreate(&EvtDescs[2], wBuffer, (wBufLen + 1)*sizeof(WCHAR));
 
