@@ -164,12 +164,45 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
     debug = False
     regexs = []
 
+    def do_POST(self):
+        if self.debug:
+            print "Received Request"
+        
+        parsed_path = urlparse(unicode(self.path))
+        length = int(self.headers.getheader('content-length'))
+        field_data = self.rfile.read(length)
+        esc_string = "[[-*-]]"
+        field_data = field_data.replace(";",esc_string)
+        args = parse_qs(field_data)
+        self.user = "-"
+        self.retval = "-"
+        self.code = -1
+        
+        if parsed_path.path == "/checkpwd":
+            message = ''
+            if 'u' in args and 'p' in args:
+                user = unquote(args['u'][0].replace(esc_string,";"))
+                self.user = user
+                password = unquote(args['p'][0].replace(esc_string,";")) #.decode('utf8')
+                (isGood,code,reason) = self.verifyPasswordGood(user.encode('utf8'),password.encode('utf8'),False)
+                message += u','.join(map(unicode,[isGood,code,reason]))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(message)
+        else:
+            self.send_response(301)
+            self.send_header('Location', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+            self.end_headers()
+        return
+
     def do_GET(self):
         if self.debug:
             print "Received Request"
         
         parsed_path = urlparse(unicode(self.path))
-        args = parse_qs(parsed_path.query)
+        esc_string = "[[-*-]]"
+        field_data = parsed_path.query.replace(";",esc_string)
+        args = parse_qs(field_data)
         self.user = "-"
         self.retval = "-"
         self.code = -1
@@ -201,9 +234,9 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
 #                message += u'\r\n'.join(message_parts)
            
             if 'u' in args and 'p' in args:
-                user = unquote(args['u'][0]) #.decode('utf8'); 
+                user = unquote(args['u'][0].replace(esc_string,";")) #.decode('utf8')
                 self.user = user
-                password = unquote(args['p'][0]) #    .decode('utf8')
+                password = unquote(args['p'][0].replace(esc_string,";")) #.decode('utf8')
                 (isGood,code,reason) = self.verifyPasswordGood(user.encode('utf8'),password.encode('utf8'))
                 message += u','.join(map(unicode,[isGood,code,reason]))
             self.send_response(200)
@@ -218,8 +251,6 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(form.read())
         else:
-            print parsed_path.path
-            return
             self.send_response(301)
             self.send_header('Location', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
             self.end_headers()
@@ -238,7 +269,7 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
                 return True
         return False
 
-    def verifyPasswordGood(self,user,password):
+    def verifyPasswordGood(self,user,password,reserve=True):
         isPwned = False
         isUsed = False
         tooShort = False
@@ -293,10 +324,15 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
                 print " \- * Password is not in token library"
     
         if not isUsed and not isPwned and not tooShort and not isRegex:
-            if self.debug:
+            if reserve == True:
                 self.tokendb.addToken(user,tokenhash,self.client_address[0])
-                print " \- + Password is a valid entry and is now reserved"
-            reason.append( "Password is valid and now reserved" )
+                reason.append( "Password is valid and now reserved" )
+                if self.debug:
+                    print " \- + Password is a valid entry and is now reserved"
+            else:
+                reason.append( "Password is tested as valid" )
+                if self.debug:
+                    print " \- + Password is tested as valid entry"
             retval = True
         else:
             if self.debug:
