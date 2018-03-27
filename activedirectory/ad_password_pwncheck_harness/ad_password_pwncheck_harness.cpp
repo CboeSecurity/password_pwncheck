@@ -4,6 +4,8 @@
 
 #include <SubAuth.h>
 
+#define DEFDLLNAME _T("ad_password_pwncheck.dll")
+
 #define DECLARE_CONST_UNICODE_STRING(_var, _string) \
 const WCHAR _var ## _buffer[] = _string; \
 const UNICODE_STRING _var = { sizeof(_string) - sizeof(WCHAR), sizeof(_string), (PWCH) _var ## _buffer } 
@@ -35,13 +37,18 @@ int wmain(int argc, _TCHAR* argv[]) {
 	password.MaximumLength = password.Length * sizeof(TCHAR);
 
 
-	HMODULE CboePasswordDll = LoadLibrary(_T("CboePasswordDll.dll"));
+	HMODULE CboePasswordDll = LoadLibrary(DEFDLLNAME);
 
 	if (CboePasswordDll)
 	{
 		PasswordFilter = (PasswordFilterPtr)GetProcAddress(CboePasswordDll, "PasswordFilter");
 	}
 
+	if (PasswordFilter == NULL)
+	{
+		printf("Could not locate the PasswordFilter function in '%s'", DEFDLLNAME);
+		return -1;
+	}
 	WCHAR nullstr[30];
 	ZeroMemory(nullstr, 30);
 	CopyMemory(nullstr, L"<NULL>", 12);
