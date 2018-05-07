@@ -274,7 +274,7 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
         return
 
     def end_headers (self):
-        self.send_header('Access-Control-Allow-Origin', '*')
+        #self.send_header('Access-Control-Allow-Origin', '*')
         SimpleHTTPRequestHandler.end_headers(self)
 
     def isRegexBlacklistMatch(self,user,password):
