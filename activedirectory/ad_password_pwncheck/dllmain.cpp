@@ -119,7 +119,7 @@ void GetSetting(LPCWSTR lpszRegistrySetting, const DWORD dwDefaultValue, DWORD* 
 		}
 		if (pLogFile != NULL)
 		{
-			fwprintf(pLogFile, L" - No Registry %s value found, using hardcoded default (%s)\n", lpszRegistrySetting, DEFAULT_HOSTNAME);
+			fwprintf(pLogFile, L" - No Registry %s value found, using hardcoded default (%d)\n", lpszRegistrySetting, dwDefaultValue);
 		}
 		*pdwReturnValue = dwDefaultValue;
 	}
@@ -156,7 +156,7 @@ void GetSetting(LPCWSTR lpszRegistrySetting, const WCHAR* lpszDefaultValue, LPWS
 		}
 		if (pLogFile != NULL)
 		{
-			fwprintf(pLogFile, L" - No Registry %s value found, using hardcoded default (%s)\n", lpszRegistrySetting, DEFAULT_HOSTNAME);
+			fwprintf(pLogFile, L" - No Registry %s value found, using hardcoded default (%s)\n", lpszRegistrySetting, lpszDefaultValue);
 		}
 		StrCpyW((PWSTR)*lpszReturnValue, (const PWSTR)lpszDefaultValue);
 	}
@@ -309,12 +309,11 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	{
 		if (flog != NULL)
 			fwprintf(flog, L"Error %u in User UrlEscape.\n", GetLastError());
-		SecureZeroMemory(lpszPass, MAXPASSSIZE);
-		SecureZeroMemory(lpszUser, MAXUSERNAMESIZE);
+		SecureZeroMemory(us_password.Buffer, us_password.MaximumLength);
+		SecureZeroMemory(us_accountName.Buffer, us_accountName.MaximumLength);
 		EventUnregister(DebugEvtH);
 		return ValidPassword;
 	}
-	SecureZeroMemory(lpszUser, MAXUSERNAMESIZE);
 
 	//////  Escape special characters in the password parameter here (less likely place)  //////
 	DWORD dwEscLenPassword = MAXUSERPASSBUFSIZE;
@@ -329,11 +328,12 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	{
 		if (flog != NULL)
 			fwprintf(flog, L"Error %u in Password UrlEscape.\n", GetLastError());
-		SecureZeroMemory(lpszPass, MAXPASSSIZE);
+		SecureZeroMemory(us_password.Buffer, us_password.MaximumLength);
+		SecureZeroMemory(us_accountName.Buffer, us_accountName.MaximumLength);
 		EventUnregister(DebugEvtH);
 		return ValidPassword;
 	}
-	SecureZeroMemory(lpszPass, MAXPASSSIZE);
+	SecureZeroMemory(us_password.Buffer, us_password.MaximumLength);
 
 	WCHAR pszRequestBuffer[REQGETBUFSIZE];
 	memset(pszRequestBuffer, '\0', sizeof(pszRequestBuffer[0])*REQGETBUFSIZE);
@@ -362,7 +362,7 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 			WINHTTP_FLAG_SECURE);
 
 	if (flog != NULL)
-		fwprintf(flog, L" *  hRequest: %016llX\n", pszRequestBuffer);
+		fwprintf(flog, L" *  hRequest: %016llX\n", hRequest);
 	if (EnableDebugEvts)
 	{
 		EventDataDescCreate(&EvtDescs[0], L"hRequest", 9 * sizeof(WCHAR));
@@ -427,14 +427,16 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 					if (flog != NULL)
 						fprintf(flog, " * Response: %s\n", pszOutBuffer);
 
+					DWORD wBufLen = RESPONSEBUFSIZE;
+					WCHAR wBuffer[RESPONSEBUFSIZE];
+					ZeroMemory(wBuffer, sizeof(wBuffer[0])*RESPONSEBUFSIZE);
+
+
 					if (strncmp("True", pszOutBuffer, 4) == 0)
 					{
 						ValidPassword = TRUE;
 						DWORD dwoffset = 5;
 						DWORD dwCode = csv2dw(&(pszOutBuffer[dwoffset]),3);
-						DWORD wBufLen = RESPONSEBUFSIZE;
-						WCHAR wBuffer[RESPONSEBUFSIZE];
-						memset(wBuffer, '\0', sizeof(wBuffer[0])*RESPONSEBUFSIZE);
 
 						dwoffset+=2;
 						if (dwCode > 9)
@@ -444,7 +446,7 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 
 						wBufLen = MultiByteToWideChar(CP_UTF8, 0, &pszOutBuffer[dwoffset], dwSize, wBuffer, wBufLen);
 
-						EventDataDescCreate(&EvtDescs[0], us_accountName.Buffer, ((us_accountName.Length + 1) * sizeof(WCHAR)));
+						EventDataDescCreate(&EvtDescs[0], us_accountName.Buffer, us_accountName.Length);
 						EventDataDescCreate(&EvtDescs[1], &dwCode, sizeof(DWORD));
 						EventDataDescCreate(&EvtDescs[2], wBuffer, (wBufLen + 1) * sizeof(WCHAR));
 
@@ -458,9 +460,6 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 						ValidPassword = FALSE;
 						DWORD dwoffset = 6;
 						DWORD dwCode = csv2dw(&(pszOutBuffer[dwoffset]),3);
-						DWORD wBufLen = RESPONSEBUFSIZE;
-						WCHAR wBuffer[RESPONSEBUFSIZE];
-						memset(wBuffer, '\0', sizeof(wBuffer[0])*RESPONSEBUFSIZE);
 
 						dwoffset += 2;
 						if (dwCode > 9)
@@ -470,9 +469,9 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 
 						wBufLen = MultiByteToWideChar(CP_UTF8, 0, &pszOutBuffer[dwoffset], dwSize, wBuffer, wBufLen);
 
-						EventDataDescCreate(&EvtDescs[0], us_accountName.Buffer, ((us_accountName.Length + 1) * sizeof(WCHAR)));
+						EventDataDescCreate(&EvtDescs[0], us_accountName.Buffer, us_accountName.Length);
 						EventDataDescCreate(&EvtDescs[1], &dwCode, sizeof(DWORD));
-						EventDataDescCreate(&EvtDescs[2], wBuffer, (wBufLen + 1)*sizeof(WCHAR));
+						EventDataDescCreate(&EvtDescs[2], wBuffer, (wcslen(wBuffer)+ 1) * sizeof(WCHAR));
 
 						regRet = EventWrite(EvtH, &EVT_PASSWORD_REJECTED, 3, EvtDescs);
 						delete[] pszOutBuffer;
@@ -501,8 +500,8 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 
 	if (flog != NULL)
 		fclose(flog);
-	SecureZeroMemory(lpszPass, MAXPASSSIZE);
-	SecureZeroMemory(lpszUser, MAXUSERNAMESIZE);
+	SecureZeroMemory(us_password.Buffer, us_password.MaximumLength);
+	SecureZeroMemory(us_accountName.Buffer, us_accountName.MaximumLength);
 	EventUnregister(EvtH);
 	return ValidPassword;
 }
