@@ -245,6 +245,23 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
         elif parsed_path.path == "/test":
             self.send_response(200)
             self.end_headers()
+        elif parsed_path.path == "/styles.css":
+            form = open('styles.css','r');
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(form.read())
+        elif parsed_path.path == "/script.js":
+            form = open('script.js','r');
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(form.read())
+        elif parsed_path.path == "/image.svg":
+            image = open('image.svg','rb').read();
+            self.send_response(200)
+            self.send_header('Content-type','image/svg+xml')
+            self.send_header('Content-Length',str(len(image)))
+            self.end_headers()
+            self.wfile.write(image)
         elif parsed_path.path == "/":
             form = open('form.html','r');
             self.send_response(200)
@@ -255,6 +272,10 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
             self.send_header('Location', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
             self.end_headers()
         return
+
+    def end_headers (self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        SimpleHTTPRequestHandler.end_headers(self)
 
     def isRegexBlacklistMatch(self,user,password):
         for line in self.regexs:

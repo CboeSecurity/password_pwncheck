@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible">
+    <title>Password Policy Validator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="main-content">
+        <div class="logo-image"><img src="image.svg" width="130px"></div>
+        <h1>Password Policy Validator</h1>
+        <p>Please type your password in the text box below, to validate if it matches the new requirements. Minumum length should be 15 characters.</p>
+        <p>For further information, please see the <a href="https://wiki.cboe.com/x/S4JVAQ">Cboe Password Policy</a></p>
+        <form id="password-form">
+                <div>
+                    <input type="password" id="password-field" name="password" placeholder="Enter Password" required>
+                    <label class="container">
+                        Show Password<input type="checkbox" id="visibility-checkbox" onclick="toggleVisibility()"/>
+                        <span class="checkmark"></span>
+                    </label>
+                </div>
+                <div>
+                    <input type="submit" id="submit-button" name="submit" value="Verify">
+                </div>
+        </form>
+        <div id="message-wrapper"></div>
+        <script src="script.js"></script>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,14 @@
+[Unit]
+Description=Pwned Password Web Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pwdservice/pwned_password_server
+ExecStart=/home/pwdservice/pwned_password_server/pwned-password-server.py --sslkeypass jamaicanhotrod -c /home/pwdservice/ssl/passwd-chain.cer  -k /home/pwdservice/ssl/password.bats.com.key  -b /home/pwdservice/db -d /home/pwdservice/tokens.sqlite -l /var/log/passwords.log
+Restart=on-failure # or always, on-abort, etc
+
+
+[Install]
+WantedBy=multi-user.target
