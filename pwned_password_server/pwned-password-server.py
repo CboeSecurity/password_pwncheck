@@ -365,6 +365,8 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
         return (retval,self.code,'\n'.join(reason))
 
     def log_message(self, format, *args):
+        if not hasattr(self,'user'):
+            self.user = '<NULLERR>'
         if not self.debug:
             args = (re.sub(r'p=.* HTTP',r'p=<redacted> HTTP',args[0]),args[1],args[2])
         print "%s\t%s\t%s\t%s\t%d\t%s" % (self.log_date_time_string(), self.client_address[0],self.user,self.retval,self.code,format%args)
