@@ -162,14 +162,48 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
     tokendb = None
     loghandle = None
     debug = False
+    always_true = False
     regexs = []
+
+    def do_POST(self):
+        if self.debug:
+            print "Received Request"
+        
+        parsed_path = urlparse(unicode(self.path))
+        length = int(self.headers.getheader('content-length'))
+        field_data = self.rfile.read(length)
+        esc_string = "[[-*-]]"
+        field_data = field_data.replace(";",esc_string)
+        args = parse_qs(field_data)
+        self.user = "-"
+        self.retval = "-"
+        self.code = -1
+        
+        if parsed_path.path == "/checkpwd":
+            message = ''
+            if 'u' in args and 'p' in args:
+                user = unquote(args['u'][0].replace(esc_string,";"))
+                self.user = user
+                password = unquote(args['p'][0].replace(esc_string,";")) #.decode('utf8')
+                (isGood,code,reason) = self.verifyPasswordGood(user.encode('utf8'),password.encode('utf8'),False)
+                message += u','.join(map(unicode,[isGood,code,reason]))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(message)
+        else:
+            self.send_response(301)
+            self.send_header('Location', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+            self.end_headers()
+        return
 
     def do_GET(self):
         if self.debug:
             print "Received Request"
         
         parsed_path = urlparse(unicode(self.path))
-        args = parse_qs(parsed_path.query)
+        esc_string = "[[-*-]]"
+        field_data = parsed_path.query.replace(";",esc_string)
+        args = parse_qs(field_data)
         self.user = "-"
         self.retval = "-"
         self.code = -1
@@ -201,10 +235,10 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
 #                message += u'\r\n'.join(message_parts)
            
             if 'u' in args and 'p' in args:
-                user = unquote(args['u'][0]) #.decode('utf8'); 
+                user = unquote(args['u'][0].replace(esc_string,";")) #.decode('utf8')
                 self.user = user
-                password = unquote(args['p'][0]) #    .decode('utf8')
-                (isGood,code,reason) = self.verifyPasswordGood(user.encode('utf8'),password.encode('utf8'))
+                password = unquote(args['p'][0].replace(esc_string,";")) #.decode('utf8')
+                (isGood,code,reason) = self.verifyPasswordGood(user.encode('utf8'),password.encode('utf8'),always_true=self.always_true)
                 message += u','.join(map(unicode,[isGood,code,reason]))
             self.send_response(200)
             self.end_headers()
@@ -212,18 +246,37 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
         elif parsed_path.path == "/test":
             self.send_response(200)
             self.end_headers()
+        elif parsed_path.path == "/styles.css":
+            form = open('styles.css','r');
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(form.read())
+        elif parsed_path.path == "/script.js":
+            form = open('script.js','r');
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(form.read())
+        elif parsed_path.path == "/image.svg":
+            image = open('image.svg','rb').read();
+            self.send_response(200)
+            self.send_header('Content-type','image/svg+xml')
+            self.send_header('Content-Length',str(len(image)))
+            self.end_headers()
+            self.wfile.write(image)
         elif parsed_path.path == "/":
             form = open('form.html','r');
             self.send_response(200)
             self.end_headers()
             self.wfile.write(form.read())
         else:
-            print parsed_path.path
-            return
             self.send_response(301)
             self.send_header('Location', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
             self.end_headers()
         return
+
+    def end_headers (self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        SimpleHTTPRequestHandler.end_headers(self)
 
     def isRegexBlacklistMatch(self,user,password):
         for line in self.regexs:
@@ -238,7 +291,7 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
                 return True
         return False
 
-    def verifyPasswordGood(self,user,password):
+    def verifyPasswordGood(self,user,password,reserve=True,always_true=False):
         isPwned = False
         isUsed = False
         tooShort = False
@@ -293,15 +346,25 @@ class PasswordRequestHandler(SimpleHTTPRequestHandler):
                 print " \- * Password is not in token library"
     
         if not isUsed and not isPwned and not tooShort and not isRegex:
-            if self.debug:
+            if reserve == True:
                 self.tokendb.addToken(user,tokenhash,self.client_address[0])
-                print " \- + Password is a valid entry and is now reserved"
-            reason.append( "Password is valid and now reserved" )
+                reason.append( "Password is valid and now reserved" )
+                if self.debug:
+                    print " \- + Password is a valid entry and is now reserved"
+            else:
+                reason.append( "Password is tested as valid" )
+                if self.debug:
+                    print " \- + Password is tested as valid entry"
             retval = True
         else:
             if self.debug:
                 print " \- - Password is invalid and unacceptable"
             retval = False
+
+	if always_true == True and retval == False:
+	    print " \- - OVERRIDING invalid with Valid (yesman enabled)!!!"
+            reason.append( "Invalid Password Approved due to Yesman mode" )
+            retval = True
         
         self.code = int(isPwned)*100+int(isUsed)*10+int(tooShort)*1+int(isRegex)*20
         self.retval = retval
@@ -331,6 +394,7 @@ if __name__ == '__main__':
     else:
         args.add_argument('-l','--logpath',help='Path to the logfile',default='/var/log/pwnedpass-access.log')
     args.add_argument('-D','--debug',help='Enter Debug mode (***DO NOT USE IN PRODUCTION!***)',action='store_true')
+    args.add_argument('-Y','--yesman',help='Always return Valid... useful for preprod staging (***DO NOT USE IN PRODUCTION!***)', action='store_true')
     cfg = args.parse_args()
 
     print cfg.sslcert
@@ -344,6 +408,7 @@ if __name__ == '__main__':
     PasswordRequestHandler.pwned = SearchFiles(cfg.breachdir)
     PasswordRequestHandler.tokendb = TokenCheck(cfg.dbpath)
     PasswordRequestHandler.loghandle = open(unicode(cfg.logpath,'utf8'),'a')
+    PasswordRequestHandler.always_true = cfg.yesman
    
     if cfg.blacklistpath != None:
         fp = open(cfg.blacklistpath,'r')
