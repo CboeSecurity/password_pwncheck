@@ -1,19 +1,19 @@
 /*
  * apt install gcc g++ libssl-dev libcurl4-openssl-dev libkrb5-dev
- * gcc -fPIC -fno-stack-protector -c src/krb_password_pwncheck.c -lcurl -lcrypto -o bin/krb_password_pwncheck.o  && \
+ * gcc -fPIC -fno-stack-protector -c src/pwncheck.c -lcurl -lcrypto -o bin/pwncheck.o  && \
  * gcc -fPIC -fno-stack-protector -c src/config.c -lcurl -lcrypto -o bin/config.o && \
  * gcc -fPIC -fno-stack-protector -c src/curl.c -lcurl -lcrypto -o bin/curl.o && \
- * ld -x --shared -o krb_password_pwncheck.so bin/krb_password_pwncheck.o bin/config.o bin/curl.o -lcurl -lcrypto && mv krb_password_pwncheck.so /lib/security/
+ * ld -x --shared -o pwncheck.so bin/pwncheck.o bin/config.o bin/curl.o -lcurl -lcrypto && mv pwncheck.so /lib/security/
  *
  * --------------
  *  [plugins]
  *          pwqual = {
- *                 module = pwncheck:pwqual/krb_password_pwncheck.so
+ *                 module = pwncheck:pwqual/pwncheck.so
  *          }
  *  --------------
  */
 
-#pragma ident   "@(#)krb_password_pwncheck.c      1.1     01/16/18 SMI"
+#pragma ident   "@(#)pwncheck.c      1.1     01/16/18 SMI"
 
 #include <stdarg.h>
 #include <syslog.h>
@@ -35,7 +35,7 @@
 #define DEF_PWD_RETURN KADM5_PASS_Q_GENERIC
 
 #ifndef __export
-#  define __export __attribute__((__visibility__("default")))
+#define __export __attribute__((__visibility__("default")))
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -59,6 +59,7 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
     int		isInsecure 	= FALSE;
 
    struct cfgpwned config; 
+   syslog(LOG_DEBUG, "pwncheck: check: started\n");
    int retconfig = parseConfig(&config, "/etc/krb5-pwned-password.conf");
 
     if (princ->data && krb5_princ_size(context, princ) > 0) {
@@ -79,6 +80,7 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
 
     if (retconfig == 0)
     {
+      syslog(LOG_DEBUG, "pwncheck: check: configuration in use\n");
       ret = config.DefaultReturn;
       isInsecure = config.isInsecure;
       url = config.url;
@@ -89,28 +91,30 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
     char filled_url[CURL_MAX_BUFLEN];
     int furllen = CURL_MAX_BUFLEN > strlen(url)+strlen(user)+strlen(passwd) ? CURL_MAX_BUFLEN : strlen(url)+strlen(user)+strlen(passwd);
     snprintf(filled_url, furllen, url, user, passwd);
-    syslog(LOG_DEBUG, "krb_password_pwncheck: Created Filling URL: %s", filled_url);
- 
+#ifdef DEBUG
+    syslog(LOG_DEBUG, "pwncheck: check: user:%s  password:%s",user,passwd);
+    syslog(LOG_DEBUG, "pwncheck: check: Created Filling URL: %s", filled_url);
+#endif 
     int queryRet =  queryUrl(filled_url, &chunk, isInsecure);
-    syslog(LOG_DEBUG, "krb_password_pwncheck: queryUrl output: %d: %d,%s", queryRet, (int)chunk.size, chunk.memory);
+    syslog(LOG_DEBUG, "pwncheck: check: queryUrl output: %d: %d,%s", queryRet, (int)chunk.size, chunk.memory);
     if (queryRet == 0 ) { // 0 == CURLE_OK
         if (strncmp("True",chunk.memory,4) == 0 ) {
-            syslog(LOG_INFO,"krb_password_pwncheck: Password change successfully checked via %s", url);
+            syslog(LOG_WARNING,"pwncheck: check: Password change successfully checked via %s", url);
             ret = 0;
         } else {
 	    int errcode = atoi(&chunk.memory[6]);
-            syslog(LOG_INFO,"krb_password_pwncheck: Password change failed: %d: %s: %h", errcode, chunk.memory);
+            syslog(LOG_WARNING,"pwncheck: check: Password change failed: %d: %s", errcode, chunk.memory);
 	    if ( (errcode & 1) == 1) {
                 ret = KADM5_PASS_Q_TOOSHORT;
-                syslog(LOG_INFO,"krb_password_pwncheck: Password change too short: %d",ret);
+                syslog(LOG_WARNING,"pwncheck: check: Password change too short: %d",ret);
 	    } else if ( (errcode & 100) == 100) {
                 ret = KADM5_PASS_Q_DICT;
-                syslog(LOG_INFO,"krb_password_pwncheck: Password breached: %d",ret );
+                syslog(LOG_WARNING,"pwncheck: check: Password breached: %d",ret );
 	    } else if ( (errcode & 10) == 10) {
                 ret = KADM5_PASS_Q_DICT;
-                syslog(LOG_INFO,"krb_password_pwncheck: Password too similar: %d",ret );
+                syslog(LOG_WARNING,"pwncheck: check: Password too similar: %d",ret );
 	    } else {
-                syslog(LOG_INFO,"krb_password_pwncheck: Unknown bad password reason: %d %d %d %d",errcode&100,errcode&10,errcode&1,errcode);
+                syslog(LOG_WARNING,"pwncheck: check: Unknown bad password reason: %d %d %d %d",errcode&100,errcode&10,errcode&1,errcode);
             }
         }
     }
@@ -130,16 +134,19 @@ krb5_error_code __export
 pwqual_pwncheck_initvt(krb5_context context, int maj_ver, int min_ver,
                krb5_plugin_vtable vtable)
 {
+    FILE* fp;
+    syslog(LOG_DEBUG,"pwncheck: initvt: Initiating");
     struct krb5_pwqual_vtable_st    *vt;
-
+/*
     if (maj_ver != 1)
         return KRB5_PLUGIN_VER_NOTSUPP;
-
+*/
     vt = (struct krb5_pwqual_vtable_st *)vtable;
     memset(vt, 0, sizeof *vt);
 
-    vt->name  = "password_pwncheck";
+    vt->name  = "pwncheck";
     vt->check = pwqual_pwncheck_check;
+    syslog(LOG_DEBUG,"pwncheck: initvt: Initiated");
 
     return 0;
 }

@@ -26,7 +26,7 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
   mem->memory = realloc(mem->memory, mem->size + realsize + 1);
   if(mem->memory == NULL) {
     /* out of memory! */ 
-    syslog(LOG_INFO,"krb_password_pwncheck: curl: not enough memory (realloc returned NULL)\n");
+    syslog(LOG_INFO,"pwncheck: WriteMemoryCallback: not enough memory (realloc returned NULL)\n");
     return 0;
   }
  
@@ -42,6 +42,7 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
     CURL *curl;
     CURLcode res;
 
+    syslog(LOG_INFO, "pwncheck: queryUrl: Initiating query: %d\n",useInsecureSSL);
     curl_global_init(CURL_GLOBAL_DEFAULT);
  
     curl = curl_easy_init();
@@ -53,6 +54,7 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
 
         if (useInsecureSSL != 0)
         {
+            syslog(LOG_WARNING, "pwncheck: queryUrl: Insecure SSL enabled\n");
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         }
@@ -61,13 +63,14 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
         res = curl_easy_perform(curl);
         /* Check for errors */ 
         if(res != CURLE_OK)
-            syslog(LOG_ERR, "krb_password_pwncheck: curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            syslog(LOG_ERR, "pwncheck: queryUrl: curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
  
         /* always cleanup */ 
         curl_easy_cleanup(curl);
     }
  
     curl_global_cleanup();
+    syslog(LOG_INFO, "pwncheck: queryUrl: Finished\n");
     return res;
 }
 

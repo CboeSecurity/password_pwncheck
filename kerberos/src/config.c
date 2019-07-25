@@ -1,21 +1,23 @@
 #include <yaml.h>
+#include <syslog.h>
 #include "config.h"
 
 int parseConfig(struct cfgpwned* config, char* filepath)
 {
+  syslog(LOG_DEBUG, "pwncheck: parseConfig: started");
   FILE* fh = fopen(filepath,"r");
   yaml_parser_t cfgparse;
   yaml_token_t cfgtoken;
 
   if (!yaml_parser_initialize(&cfgparse))
   {
-    fputs("Failed to iniialize YAML parser!\n", stderr);
+    syslog(LOG_DEBUG, "pwncheck: parseConfig: Failed to iniialize YAML parser!\n");
     return -1;
   }
 
   if (fh == NULL)
   {
-    fputs("Failed to open file!\n", stderr);
+    syslog(LOG_DEBUG, "pwncheck: parseConfig: Failed to open file!\n");
     return -2;
   }
 
@@ -40,13 +42,24 @@ int parseConfig(struct cfgpwned* config, char* filepath)
     case YAML_SCALAR_TOKEN:
       if (curMode == KVKEY) {
         if (strncmp("InsecureSSL",cfgtoken.data.scalar.value,strlen("InsecureSSL")) == 0)
-          curKeyValue = &lpszInsecureSSL;        
-        else if (strncmp("QueryUrl",cfgtoken.data.scalar.value,strlen("QueryUrl")) == 0)
-          curKeyValue = &lpszQueryURL;        
+	{
+            //syslog(LOG_INFO, "pwncheck: parseConfig: InsecureSSL being set\n");
+            curKeyValue = &lpszInsecureSSL;        
+	}
+	else if (strncmp("QueryUrl",cfgtoken.data.scalar.value,strlen("QueryUrl")) == 0)
+	{
+            //syslog(LOG_INFO, "pwncheck: parseConfig: QueryUrl being set\n");
+	    curKeyValue = &lpszQueryURL;        
+	}
         else if (strncmp("DefaultReturn",cfgtoken.data.scalar.value,strlen("DefaultReturn")) == 0)
-          curKeyValue = &lpszDefaultReturn;
+	{
+            //syslog(LOG_INFO, "pwncheck: parseConfig: DefaultReturn being set\n");
+            curKeyValue = &lpszDefaultReturn;
+	}
         else
-          curKeyValue = NULL;
+	{
+            curKeyValue = NULL;
+	}
       } else if (curMode == KVVALUE) {
         if (curKeyValue != NULL)
         {
@@ -67,11 +80,15 @@ int parseConfig(struct cfgpwned* config, char* filepath)
   yaml_parser_delete(&cfgparse);
   fclose(fh);
 
+  syslog(LOG_INFO, "pwncheck: parseConfig: (strings) url:'%s' insecureSSL:'%s' defaultReturn:'%s'",lpszQueryURL,lpszInsecureSSL,lpszDefaultReturn);
   config->url = lpszQueryURL;
   int lenmin = (4 < strlen(lpszInsecureSSL))?4:strlen(lpszInsecureSSL);
   config->isInsecure = (strncasecmp("True",lpszInsecureSSL,lenmin) == 0)?1:0;
+  config->isInsecure = (strncasecmp("1",lpszInsecureSSL,lenmin) == 0)?1:config->isInsecure;
   config->DefaultReturn = atoi(lpszDefaultReturn);
+  syslog(LOG_INFO, "pwncheck: parseConfig: (struct) url:'%s' insecureSSL:%d defaultReturn:%d",config->url,config->isInsecure,config->DefaultReturn);
   free(lpszInsecureSSL);
   free(lpszDefaultReturn);
+  syslog(LOG_DEBUG, "pwncheck: parseConfig: Done");
   return 0;
 }
