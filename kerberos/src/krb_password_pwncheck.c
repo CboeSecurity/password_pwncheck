@@ -25,8 +25,8 @@
 #include <syslog.h>
 #include <stdlib.h>
 #include "config.h"
-#include "../common/curl.h"
-#include "../common/constants.h"
+#include "../../common/curl.h"
+#include "../../common/constants.h"
 
 
 // kerberos

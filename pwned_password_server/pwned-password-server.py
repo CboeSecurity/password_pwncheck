@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+# Authored by: Jan Grzymala-Busse 
+# Cboe Security
+# Provided as is, no warranties, please see included licensing.
+
 # taken from http://www.piware.de/2011/01/creating-an-https-server-in-python/
 # generate server.xml with the following command:
 #    openssl req -new -x509 -keyout server.pem -out server.pem -days 365 -nodes

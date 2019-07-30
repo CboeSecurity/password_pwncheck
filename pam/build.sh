@@ -15,8 +15,9 @@ if [ ! -d bin ]; then
 fi
 rm bin/pam_pwncheck.so /lib/security/pam_pwncheck.so  /lib/x86_64-linux-gnu/security/pam_pwncheck.so
 #cp bin/pam_pwncheck.so /usr/lib/x86_64-linux-gnu/krb5/plugins/pwqual/
+gcc -fPIC -fno-stack-protector -c ../common/curl.c -lcurl -lcrypto -o bin/curl.o
 gcc -fPIC -fno-stack-protector -c src/pam_password_pwncheck.c -lcurl -lcrypto -o bin/pam_pwncheck.o 
-ld -x --shared -o bin/pam_pwncheck.so bin/pam_pwncheck.o -lpam -lcurl -lcrypto
+ld -x --shared -o bin/pam_pwncheck.so bin/pam_pwncheck.o bin/curl.o -lpam -lcurl -lcrypto
 cp bin/pam_pwncheck.so /lib/x86_64-linux-gnu/security/
 cp bin/pam_pwncheck.so /lib/security/
 

@@ -1,4 +1,10 @@
 /*
+ * Authored by: Jan Grzymala-Busse 
+ * Cboe Security
+ * Provided as is, no warranties, please see included licensing.
+*/
+
+/*
  * apt install gcc g++ libssl-dev libpam0g-dev libcurl4-openssl-dev
  * gcc -fPIC -fno-stack-protector -c pam_password_pwncheck.c -lcurl -lcrypto -o bin/pam_password_pwncheck.o && ld -x --shared -o pam_password_pwncheck.so bin/pam_password_pwncheck.o -lpam -lcurl -lcrypto && mv pam_password_pwncheck.so /lib/security/
  *
@@ -22,91 +28,13 @@
 #include <security/pam_ext.h>
 
 // curl
-#include <stdio.h>
-#include <curl/curl.h>
+//#include <stdio.h>
+//#include <curl/curl.h>
+#include "../../common/constants.h"
+#include "../../common/curl.h"
 
 // our code
-
-#define CURL_RESPONSE_INIT_SIZE 1024 
-#define CURL_MAX_BUFLEN 2048
-#define INSECURE
-
 #include <unistd.h>
-
-// more curl
-#ifdef INSECURE
-#define SKIP_PEER_VERIFICATION
-#define SKIP_HOSTNAME_VERIFICATION
-#endif
-
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-// The following is the Curl-based SSL query code                                 //
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-
-struct MemoryStruct {
-  char *memory;
-  size_t size;
-};
-
-static size_t
-WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
-{
-  size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
- 
-  mem->memory = realloc(mem->memory, mem->size + realsize + 1);
-  if(mem->memory == NULL) {
-    /* out of memory! */ 
-    syslog(LOG_INFO,"pam_password_pwncheck: curl: not enough memory (realloc returned NULL)\n");
-    return 0;
-  }
- 
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
- 
-  return realsize;
-}
-
-int queryUrl(pam_handle_t *pamh, const char* dest_url, struct MemoryStruct* chunk)
-{
-    CURL *curl;
-    CURLcode res;
-
-    curl_global_init(CURL_GLOBAL_DEFAULT);
- 
-    curl = curl_easy_init();
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, dest_url);
- 
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)chunk); 
-
-#ifdef SKIP_PEER_VERIFICATION
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        syslog(LOG_WARNING, "pam_password_pwncheck: queryUrl: INSECURE: Verify Peer disabled");
-#endif
- 
-#ifdef SKIP_HOSTNAME_VERIFICATION
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        syslog(LOG_WARNING, "pam_password_pwncheck: queryUrl: INSECURE: Verify Host disabled");
-#endif
- 
-        /* Perform the request, res will get the return code */ 
-        res = curl_easy_perform(curl);
-        /* Check for errors */ 
-        if(res != CURLE_OK)
-            syslog(LOG_ERR, "pam_password_pwncheck: curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
- 
-        /* always cleanup */ 
-        curl_easy_cleanup(curl);
-    }
- 
-    curl_global_cleanup();
-    return res;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +58,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc,
     char *user;
     const char *url;
     char *passwd;   /* the newly typed password */
+    int isInsecure = 0;
 
     for (i = 0; i < argc; i++) {
         if (strcmp(argv[i], "debug") == 0)
@@ -138,6 +67,8 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc,
             maxequal = atoi(&argv[i][9]);
         else if (strncmp(argv[i], "url=", 4) == 0)
             url = &argv[i][4];
+        else if (strncmp(argv[i], "isinsecure=", 11) == 0)
+            isInsecure = atoi(&argv[i][11]);
     }
     
     struct MemoryStruct chunk;
@@ -203,7 +134,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc,
     chunk.memory = malloc(1); /* will be grown as needed by the realloc above */ 
     chunk.size = 0; /* no data at this point */ 
     memset(chunk.memory,'\0',1); 
-    int retUrl = queryUrl(pamh, filled_url, &chunk);
+    int retUrl = queryUrl(filled_url, &chunk, isInsecure);
 
     syslog(LOG_DEBUG, "pam_password_pwncheck: queryUrl output: %d: %d,%s", retUrl, (int)chunk.size, chunk.memory);
     if ((retUrl == CURLE_OK) && (strncmp("True",chunk.memory,4) == 0 )) {
