@@ -129,8 +129,10 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc,
     char filled_url[CURL_MAX_BUFLEN];
     int furllen = CURL_MAX_BUFLEN > strlen(url)+strlen(user)+strlen(passwd) ? CURL_MAX_BUFLEN : strlen(url)+strlen(user)+strlen(passwd);
     snprintf(filled_url, furllen, url, user, passwd);
+#ifdef DEBUG
+    syslog(LOG_DEBUG, "pam_password_pwncheck: check: user:%s  password:%s",user,passwd);
     syslog(LOG_DEBUG, "pam_password_pwncheck: Created Filling URL: %s", filled_url);
-
+#endif
     chunk.memory = malloc(1); /* will be grown as needed by the realloc above */ 
     chunk.size = 0; /* no data at this point */ 
     memset(chunk.memory,'\0',1); 
@@ -141,6 +143,27 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc,
         syslog(LOG_INFO,"pam_password_pwncheck: %s: Password change successfully checked via %s", service, url); 
     } else
     {
+        int errcode = atoi(&chunk.memory[6]);
+        syslog(LOG_WARNING,"pam_password_pwncheck: Password change failed: %d: %s", errcode, chunk.memory);
+	char* errmsg = "";
+        if ( (errcode & 1) == 1) {
+            syslog(LOG_WARNING,"pam_password_pwncheck: Password change too short: %d",ret);
+	    errmsg = "Too short";
+        } else if ( (errcode & 200) == 200) {
+            syslog(LOG_WARNING,"pam_password_pwncheck: Password too similar to breached: %d",ret );
+	    errmsg = "Similar to known breached";
+        } else if ( (errcode & 100) == 100) {
+            syslog(LOG_WARNING,"pam_password_pwncheck: Password breached: %d",ret );
+	    errmsg = "Known breached";
+        } else if ( (errcode & 10) == 10) {
+            syslog(LOG_WARNING,"pam_password_pwncheck: Password too similar: %d",ret );
+	    errmsg = "Too similar to previous";
+        } else {
+            syslog(LOG_WARNING,"pam_password_pwncheck: Unknown bad password reason: %d %d %d %d %d",errcode&200,errcode&100,errcode&10,errcode&1,errcode);
+	    errmsg = "Unknown bad password, see logs";
+        }
+        syslog(LOG_WARNING,"pam_password_pwncheck: Password change too short: %d",ret);
+	pam_error(pamh, _("Password change failed: %s"), errmsg);
         ret = PAM_AUTHTOK_ERR;
     }
     memset(filled_url,'\0',CURL_MAX_BUFLEN);
