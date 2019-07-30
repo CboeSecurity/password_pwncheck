@@ -47,7 +47,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 * Copy the `/lib/security/pwncheck.so` library to the PAM folder (typically /lib/security)  if it isn't there already.
 * Configure /etc/pam.d/ files that use "password" module to load the pam_pwncheck.so module first, in a way similar to:
 ```
-password	requisite			pam_pwncheck.so debug url=https://<password server domain>/checkpwd?u=%s&p=%s
+password	requisite			pam_pwncheck.so url=https://<password server domain>/checkpwd?u=%s&p=%s
 password	[success=1 default=ignore]	pam_unix.so obscure sha512 use_authtok
 ```
 (note the pam_unix setting here is a pre-existing entry)
