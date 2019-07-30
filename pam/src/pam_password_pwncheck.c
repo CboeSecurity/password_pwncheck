@@ -163,7 +163,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc,
 	    errmsg = "Unknown bad password, see logs";
         }
         syslog(LOG_WARNING,"pam_password_pwncheck: Password change too short: %d",ret);
-	pam_error(pamh, _("Password change failed: %s"), errmsg);
+	pam_error(pamh, "Password change failed: %s", errmsg);
         ret = PAM_AUTHTOK_ERR;
     }
     memset(filled_url,'\0',CURL_MAX_BUFLEN);
