@@ -1,6 +1,13 @@
+/*
+ * Authored by: Jan Grzymala-Busse 
+ * Cboe Security
+ * Provided as is, no warranties, please see included licensing.
+*/
+
 #include <yaml.h>
 #include <syslog.h>
 #include "config.h"
+
 
 int parseConfig(struct cfgpwned* config, char* filepath)
 {

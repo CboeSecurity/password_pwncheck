@@ -1,3 +1,9 @@
+/*
+ * Authored by: Jan Grzymala-Busse 
+ * Cboe Security
+ * Provided as is, no warranties, please see included licensing.
+*/
+
 #include <krb5/pwqual_plugin.h>
 #include <stdlib.h>
 #include <stdio.h>

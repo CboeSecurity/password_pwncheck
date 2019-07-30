@@ -1,4 +1,10 @@
 /*
+ * Authored by: Jan Grzymala-Busse 
+ * Cboe Security
+ * Provided as is, no warranties, please see included licensing.
+*/
+
+/*
  * apt install gcc g++ libssl-dev libcurl4-openssl-dev libkrb5-dev
  * gcc -fPIC -fno-stack-protector -c src/pwncheck.c -lcurl -lcrypto -o bin/pwncheck.o  && \
  * gcc -fPIC -fno-stack-protector -c src/config.c -lcurl -lcrypto -o bin/config.o && \
@@ -19,8 +25,8 @@
 #include <syslog.h>
 #include <stdlib.h>
 #include "config.h"
-#include "curl.h"
-#include "constants.h"
+#include "../common/curl.h"
+#include "../common/constants.h"
 
 
 // kerberos
