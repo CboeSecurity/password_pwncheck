@@ -29,7 +29,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 * Run `wevtutil im Resources.man /rf:"%windir%\system32\ad_password_pwncheck.dll" /mf:"%windir%\system32\ad_password_pwncheck.dll"` to properly register windows event logs
 * Run the included registry file to enable registry settings
 
-## Kerberos filter DLL
+## Kerberos filter Shared Object
 
 * Run the `./build.sh` too, make sure openssl-devel and curl-devel modules are loaded in your SLES/RedHat/Debian derived distribution.
 * Copy the `/lib/security/krb_password_pwncheck.so` library to the kerberos plugins/pwqual folder.
@@ -37,6 +37,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ```
 [plugins]
     pwqual = {
-      module = pwncheck:pwqual/krb_password_pwncheck.so 
+      module = pwncheck:pwqual/pwncheck.so 
     }
-````
+```
+
+## PAM Password filter Shared Object
+
+* Run the `./build.sh` too, make sure openssl-devel and curl-devel modules are loaded in your SLES/Redhat/Debian derived distribution.
+* Copy the `/lib/security/pwncheck.so` library to the PAM folder (typically /lib/security)  if it isn't there already.
+* Configure /etc/pam.d/ files that use "password" module to load the pam_pwncheck.so module first, in a way similar to:
+```
+password	requisite			pam_pwncheck.so debug url=https://<password server domain>/checkpwd?u=%s&p=%s
+password	[success=1 default=ignore]	pam_unix.so obscure sha512 use_authtok
+```
+(note the pam_unix setting here is a pre-existing entry)
