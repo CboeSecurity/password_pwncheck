@@ -19,9 +19,9 @@ from sqlalchemy import Column, Integer, Text, DateTime
 from sqlalchemy.sql import func
 Base = declarative_base()
 
-import logging
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#import logging
+#logging.basicConfig()
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 #fp = open(u'/var/log/pwnedpass-access.log','a')  
 HashAlgorithmStrings = ['md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512']
