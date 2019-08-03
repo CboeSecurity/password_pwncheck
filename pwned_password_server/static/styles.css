@@ -1,0 +1,175 @@
+@import url('//fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,700');
+body {
+    text-align: center;
+    font-family: Source Sans Pro;
+    background-color: rgb(240, 240, 240);
+    font-size: 16px;
+}
+
+h1 {
+    color: rgb(0, 32, 81);
+    line-height: 1.2em;
+    font-weight: 400;
+}
+
+.main-content {
+    margin: auto;
+    margin-top: 0.625em;
+    margin-bottom: 0.625em;
+    width: 37.5em;
+    min-height: 25em;
+    border: solid 0.0625em rgb(204, 204, 204);
+    background-color: rgb(255, 255, 255);
+    padding: 2em;
+}
+
+.main-content p {
+    text-align: left;
+    margin-bottom: 3em;
+}
+
+.main-content .logo-image {
+    text-align: left;
+    padding-bottom: 2em;
+    border-bottom: solid 0.0625em rgb(204, 204, 204);
+}
+
+#transition-green {
+    background-color: green;
+    transition: background-color 300ms linear;
+}
+
+form div {
+    display: inline-block;
+    margin: 0.725em;
+    vertical-align: top;
+}
+
+
+
+input:focus,
+textarea:focus,
+keygen:focus,
+select:focus {
+    outline-offset: 0;
+    outline-style: auto;
+    outline-width: 0;
+}
+
+#password-field {
+    width: 14em;
+    text-align: center;
+    line-height: 1.5em;
+    font-size: 1.5em;
+    border: 0.0625em solid lightgrey;
+    border-radius: 0.1875em;
+}
+
+#message-wrapper {
+    width: 80%;
+    margin: 0 auto;
+}
+
+p.msg-box {
+    padding: 0.725em;
+    border-radius: 0.3125em;
+    color: #FFF;
+    font-size: 1.5em;
+    margin-bottom: 1em;
+}
+
+.success-msg {
+    background-color: rgb(0, 168, 44);
+}
+
+.error-msg {
+    background-color: #E25130;
+}
+
+#submit-button {
+    background-color: rgb(0, 32, 81);
+    border: none;
+    border-radius: 0.3125em;
+    color: #FFF;
+    display: inline-block;
+    font-size: 1em;
+    text-align: center;
+    text-decoration: none;
+    width: 5.625em;
+    padding: 0.725em;
+    text-transform: uppercase;
+}
+
+#submit-button:hover{
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Customize the label (the container) */
+.container {
+    display: block;
+    position: relative;
+    padding-left: 1.5em;
+    margin-bottom: 0.825em;
+    margin-top: 0.125em;
+    cursor: pointer;
+    font-size: 1em;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    width: 35%;
+    text-align: left;
+}
+
+/* Hide the browser's default checkbox */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 0.2em;
+  left: 0;
+  height: 1em;
+  width: 1em;
+  background-color: #eee;
+}
+
+/* On mouse-over, add a grey background color */
+.container:hover input ~ .checkmark {
+  background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.container input:checked ~ .checkmark {
+  background-color: #2196F3;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Style the checkmark/indicator */
+.container .checkmark:after {
+  left: 0.25em;
+  top: 0;
+  width: 0.3125em;
+  height: 0.625em;
+  border: solid white;
+  border-width: 0 0.1875em 0.1875em 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
