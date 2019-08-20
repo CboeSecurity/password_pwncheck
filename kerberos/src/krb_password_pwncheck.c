@@ -86,7 +86,7 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
 
     if (retconfig == 0)
     {
-      syslog(LOG_DEBUG, "pwncheck: check: configuration in use\n");
+      syslog(LOG_DEBUG, "pwncheck: check: configuration in use");
       ret = config.DefaultReturn;
       isInsecure = config.isInsecure;
       url = config.url;
@@ -95,7 +95,10 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
     
 
     char filled_url[CURL_MAX_BUFLEN];
-    int furllen = CURL_MAX_BUFLEN > strlen(url)+strlen(user)+strlen(passwd) ? CURL_MAX_BUFLEN : strlen(url)+strlen(user)+strlen(passwd);
+    //int furllen = CURL_MAX_BUFLEN > strlen(url)+strlen(user)+strlen(passwd) ? CURL_MAX_BUFLEN : strlen(url)+strlen(user)+strlen(passwd);
+    int furllen = strlen(url)+strlen(user)+strlen(passwd);
+    if (furllen > CURL_MAX_BUFLEN) furllen = CURL_MAX_BUFLEN;
+    ) 
     snprintf(filled_url, furllen, url, user, passwd);
 #ifdef DEBUG
     syslog(LOG_DEBUG, "pwncheck: check: user:%s  password:%s",user,passwd);
@@ -103,7 +106,7 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
 #endif 
     int queryRet =  queryUrl(filled_url, &chunk, isInsecure);
     syslog(LOG_DEBUG, "pwncheck: check: queryUrl output: %d: %d,%s", queryRet, (int)chunk.size, chunk.memory);
-    if (queryRet == 0 ) { // 0 == CURLE_OK
+    if ((queryRet == 0 ) && (chunk.size >= 6)) { // 0 == CURLE_OK
         if (strncmp("True",chunk.memory,4) == 0 ) {
             syslog(LOG_WARNING,"pwncheck: check: Password change successfully checked via %s", url);
             ret = 0;
@@ -123,6 +126,8 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
                 syslog(LOG_WARNING,"pwncheck: check: Unknown bad password reason: %d %d %d %d",errcode&100,errcode&10,errcode&1,errcode);
             }
         }
+    } else {
+        syslog(LOG_ERROR,"pwncheck: check: Request to Password Server returned error: %d",queryRet);
     }
 
    
