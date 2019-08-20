@@ -98,7 +98,6 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
     //int furllen = CURL_MAX_BUFLEN > strlen(url)+strlen(user)+strlen(passwd) ? CURL_MAX_BUFLEN : strlen(url)+strlen(user)+strlen(passwd);
     int furllen = strlen(url)+strlen(user)+strlen(passwd);
     if (furllen > CURL_MAX_BUFLEN) furllen = CURL_MAX_BUFLEN;
-    ) 
     snprintf(filled_url, furllen, url, user, passwd);
 #ifdef DEBUG
     syslog(LOG_DEBUG, "pwncheck: check: user:%s  password:%s",user,passwd);
@@ -127,7 +126,7 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
             }
         }
     } else {
-        syslog(LOG_ERROR,"pwncheck: check: Request to Password Server returned error: %d",queryRet);
+        syslog(LOG_ERR,"pwncheck: check: Request to Password Server returned error: %d",queryRet);
     }
 
    
