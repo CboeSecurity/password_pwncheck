@@ -33,15 +33,32 @@
 #define DEFAULT_HOSTNAME L"password.bats.com"
 #define DEFAULT_URIPATH L"/checkpwd?u=%s&p=%s"
 #define DEFAULT_RETURN FALSE // if TRUE then fail open, FALSE fail closed
+
+#ifdef _DEBUG
+#define DEBUG_MOST
+#define DEBUG_PASS
+#endif
+
+#define DEBUG_MOST
+
+#if defined DEBUG_MOST || defined DEBUG_PASS || defined _DEBUG
+#define DEBUG_INIT
+#endif
+
+#ifdef DEBUG_INIT
 #define DEFAULT_LOGFILE L"c:\\passlog.txt"
 #define DEFAULT_REGDEBUG FALSE
+#endif 
 
 #define REGKEYPATH L"SYSTEM\\CurrentControlSet\\Services\\cpl"
 #define REG_HOSTNAME L"Hostname"
 #define REG_PATH L"Path"
 #define REG_DEFAULTRETURN L"DefaultReturn"
+#define REG_WHITELISTEDUSERS L"WhiteListUsers"
+#ifdef DEBUG_INIT
 #define REG_LOGFILE L"LogFile"
 #define REG_REGDEBUG L"DebugToEvents"
+#endif
 
 BOOL APIENTRY DllMain(HMODULE hModule,
 DWORD  ul_reason_for_call,
@@ -176,6 +193,24 @@ void GetSetting(LPCWSTR lpszRegistrySetting, const WCHAR* lpszDefaultValue, LPWS
 	}
 }
 
+bool isWhiteListed(LPTSTR lptzUser)
+{
+	DWORD retSize = 1024;
+	WCHAR lpszReturnValue[1024];
+
+	LPCWSTR lpszRegistrySetting = REG_WHITELISTEDUSERS;
+	if (ERROR_SUCCESS == RegGetValue(HKEY_LOCAL_MACHINE, REGKEYPATH, lpszRegistrySetting, RRF_RT_REG_MULTI_SZ | RRF_ZEROONFAILURE, NULL, lpszReturnValue, &retSize))
+	{
+		LPTSTR lpValue = lpszReturnValue;
+		for (; '\0' != *lpValue; lpValue += wcslen(lpValue) + 1)
+		{
+			// Show one value
+			if (0 == lstrcmpi(lpValue, lptzUser))
+				return TRUE;
+		}
+	}
+	return FALSE;
+}
 
 
 
@@ -190,9 +225,11 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	LPSTR pszOutBuffer;
 	BOOL  bResults = FALSE;
 	DWORD dwDwordSize = sizeof(DWORD);
-	DWORD EnableDebugEvts;
+#ifdef DEBUG_INIT
 	WCHAR lpszLogFilePath[_MAX_PATH];
 	DWORD dwLogFilePathSize = _MAX_PATH;
+	DWORD EnableDebugEvts;
+#endif
 	BOOL ValidPassword = DEFAULT_RETURN;
 
 	REGHANDLE EvtH = NULL;
@@ -200,13 +237,15 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	EVENT_DATA_DESCRIPTOR EvtDescs[10];
 
 	ULONG regRet = EventRegister(&PWNED_GUID, NULL, NULL, &EvtH);
-	regRet = EventWrite(EvtH, &EVT_INITATED,0,NULL);
+	regRet = EventWrite(EvtH, &EVT_INITATED, 0, NULL);
 
 
 	// Grab logging settings here - whether to provide DANGEROUS logging to file or event debugging (safe to have both of these disabled!)
+#ifdef DEBUG_INIT
 	ZeroMemory(lpszLogFilePath, _MAX_PATH);
 	GetSetting(REG_REGDEBUG, DEFAULT_REGDEBUG, &EnableDebugEvts, &dwDwordSize);
 	GetSetting(REG_LOGFILE, DEFAULT_LOGFILE, lpszLogFilePath, &dwLogFilePathSize);
+#endif
 
 	// Our versions are null-terminated, because windows user mode generally prefers this
 	WCHAR lpszUser[MAXUSERNAMESIZE];
@@ -224,20 +263,20 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	CopyMemory(lpszName, fullName->Buffer, min(fullName->Length, MAXFULLNAMESIZE));
 	UNICODE_STRING us_fullName = { fullName->Length + sizeof(WCHAR), MAXFULLNAMESIZE, lpszName };
 
-	//SecureZeroMemory(accountName->Buffer, accountName->Length);
-	//SecureZeroMemory(fullName->Buffer, fullName->Length);
-	//SecureZeroMemory(password->Buffer, password->Length);
-	//password->Length = 0;
-	//password->MaximumLength = 0;
-
-	// if enabled, go ahead and prepare the file based logging
 	FILE* flog = NULL;
+#ifdef DEBUG_INIT
+	// if enabled, go ahead and prepare the file based logging
 	if (lpszLogFilePath[0] != NULL)
 	{
 		_wfopen_s(&flog, lpszLogFilePath, L"a");
-		fwprintf(flog, L"*** Incoming Values: %d':%s' : %d'%s' :%d: %d:'%s'...\n", us_accountName.Length, us_accountName.Buffer, us_fullName.Length, us_fullName.Buffer, operation, us_password.Length, us_password.Buffer);
 	}
-	
+#endif
+#ifdef DEBUG_PASS
+	if (lpszLogFilePath[0] != NULL)
+	{
+			fwprintf(flog, L"*** Incoming Values: %d':%s' : %d'%s' :%d: %d:'%s'...\n", us_accountName.Length, us_accountName.Buffer, us_fullName.Length, us_fullName.Buffer, operation, us_password.Length, us_password.Buffer);
+	}
+
 	// if enabled, go ahead and prepare the DEBUG event logging (logs for DEBUGGING, not meant for daily use!)
 	if (EnableDebugEvts == TRUE)
 	{
@@ -248,6 +287,17 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 		EventDataDescCreate(&EvtDescs[3], &operation, sizeof(DWORD));
 		regRet = EventWrite(DebugEvtH, &EVT_ACTIVATED, 4, EvtDescs);
 	}
+#endif
+
+	if (isWhiteListed(lpszUser))
+	{
+		SecureZeroMemory(us_password.Buffer, us_password.MaximumLength);
+		SecureZeroMemory(us_accountName.Buffer, us_accountName.MaximumLength);
+		EventUnregister(EvtH);
+		return TRUE;
+	}
+
+
 	ZeroMemory(lpszName, MAXFULLNAMESIZE);
 
 	// Prepare and grab registry settings here verbosely (since we have those settings now)
@@ -258,6 +308,7 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	DWORD dwURIPathLen = MAXREGPATHSIZE;
 	memset(pszURIPath, '\0', sizeof(pszURIPath[0] * MAXREGPATHSIZE));
 	DWORD dwRegReturn;
+
 	GetSetting(REG_HOSTNAME, DEFAULT_HOSTNAME, pszHostname, &dwHostnameLen, DebugEvtH, flog);
 	GetSetting(REG_PATH, DEFAULT_URIPATH, pszURIPath, &dwURIPathLen, DebugEvtH, flog);
 	GetSetting(REG_DEFAULTRETURN, DEFAULT_RETURN, &dwRegReturn, &dwDwordSize, DebugEvtH, flog);
@@ -273,13 +324,14 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 		WINHTTP_NO_PROXY_BYPASS, 0);
 	if (flog != NULL)
 		fwprintf(flog, L" *  hSession: %016llX\n", hSession);
+#ifdef DEBUG_MOST
 	if (EnableDebugEvts)
 	{
 		EventDataDescCreate(&EvtDescs[0], L"hSession", 9 * sizeof(WCHAR));
 		EventDataDescCreate(&EvtDescs[1], hSession, sizeof(hSession));
 		regRet = EventWrite(DebugEvtH, &EVT_SHOWHANDLE, 2, EvtDescs);
 	}
-
+#endif
 
 	// Specify an HTTP server.
 	if (hSession)
@@ -287,13 +339,14 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 			INTERNET_DEFAULT_HTTPS_PORT, 0);
 	if (flog != NULL)
 		fwprintf(flog, L" *  hConnect: %016llX\n", hConnect);
+#ifdef DEBUG_MOST
 	if (EnableDebugEvts)
 	{
 		EventDataDescCreate(&EvtDescs[0], L"hConnect", 9 * sizeof(WCHAR));
 		EventDataDescCreate(&EvtDescs[1], hConnect, sizeof(hConnect));
 		regRet = EventWrite(DebugEvtH, &EVT_SHOWHANDLE, 2, EvtDescs);
 	}
-
+#endif
 
 	//////  Escape special characters in the user parameter here (less likely place)  //////
 	DWORD dwEscLenUser = MAXUSERPASSBUFSIZE; // add for null
@@ -322,8 +375,10 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	escRet = UrlEscape(us_password.Buffer, pwstrEscPassword, &dwEscLenPassword, URL_ESCAPE_SEGMENT_ONLY | URL_ESCAPE_PERCENT);
 
 	// encoding/decoding the user field is critical, if we fail, we fail with setting of default return (aka fail open / fail close)
+#ifdef DEBUG_PASS
 	if (flog != NULL)
 		fwprintf(flog,L" * Info: %s(%d) in Password UrlEscape.\n", pwstrEscPassword, dwEscLenPassword);
+#endif
 	if (S_OK != escRet)
 	{
 		if (flog != NULL)
@@ -351,8 +406,15 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 	SecureZeroMemory(pwstrEscPassword, sizeof(pwstrEscPassword[0] * MAXUSERPASSBUFSIZE));
 	SecureZeroMemory(pwstrEscUser, sizeof(pwstrEscUser[0] * MAXUSERPASSBUFSIZE));
 
+#ifdef DEBUG_PASS
 	if (flog != NULL)
 		fwprintf(flog, L" * Info: URLPath(%d): %s\n", reqbufsize, pszRequestBuffer);
+#else
+	if (flog != NULL)
+		fwprintf(flog, L" * Info: URLPath(%d) <redacted>: %s\n", lstrlenW(CHECKURI), CHECKURI);
+#endif
+
+
 
 	// Create an HTTP request handle.
 	if (hConnect)
@@ -363,12 +425,14 @@ extern "C" __declspec(dllexport) BOOLEAN __stdcall PasswordFilter(
 
 	if (flog != NULL)
 		fwprintf(flog, L" *  hRequest: %016llX\n", hRequest);
+#ifdef DEBUG_MOST
 	if (EnableDebugEvts)
 	{
 		EventDataDescCreate(&EvtDescs[0], L"hRequest", 9 * sizeof(WCHAR));
 		EventDataDescCreate(&EvtDescs[1], hRequest, sizeof(hConnect));
 		regRet = EventWrite(DebugEvtH, &EVT_SHOWHANDLE, 2, EvtDescs);
 	}
+#endif
 
 	// Send a request.
 	if (hRequest)
