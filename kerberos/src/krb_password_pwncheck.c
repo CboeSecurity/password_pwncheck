@@ -64,9 +64,14 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
     int 	ret 		= DEF_PWD_RETURN; // default is unspecified issue
     int		isInsecure 	= FALSE;
 
-   struct cfgpwned config; 
-   syslog(LOG_DEBUG, "pwncheck: check: started\n");
-   int retconfig = parseConfig(&config, "/etc/krb5-pwned-password.conf");
+    struct cfgpwned config; 
+    syslog(LOG_DEBUG, "pwncheck: check: started\n");
+    int retconfig = parseConfig(&config, "/etc/krb5-pwned-password.conf");
+
+    //if (princ == NULL)
+    //{
+    //    return ret;
+    //}
 
     if (princ->data && krb5_princ_size(context, princ) > 0) {
         user = princ->data[0].data;

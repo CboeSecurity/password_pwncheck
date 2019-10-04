@@ -48,7 +48,8 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
  
     curl = curl_easy_init();
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, dest_url);
+        char* escaped_url = curl_easy_escape(curl, dest_url, 0);
+        curl_easy_setopt(curl, CURLOPT_URL, escaped_url);
  
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)chunk); 
@@ -67,6 +68,7 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
             syslog(LOG_ERR, "pwncheck: queryUrl: curl_easy_perform() failed: %s", curl_easy_strerror(res));
  
         /* always cleanup */ 
+        curl_free(escaped_url);
         curl_easy_cleanup(curl);
     }
  
