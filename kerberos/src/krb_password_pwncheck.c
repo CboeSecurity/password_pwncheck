@@ -28,6 +28,9 @@
 #include "../../common/curl.h"
 #include "../../common/constants.h"
 
+// for encoding
+#include <stdio.h>
+#include <ctype.h>
 
 // kerberos
 
@@ -50,10 +53,13 @@
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////////
 // Perform the actual password quality check                                      //
 ////////////////////////////////////////////////////////////////////////////////////
-static krb5_error_code
+#ifdef DEBUG
+krb5_error_code extern __export
+#else
+static krb5_error_code 
+#endif
 pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
               const char *passwd, const char *policy_name,
               krb5_principal princ, const char **languages)
@@ -97,13 +103,18 @@ pwqual_pwncheck_check(krb5_context context, krb5_pwqual_moddata data,
       url = config.url;
     }
      
-    
 
     char filled_url[CURL_MAX_BUFLEN];
     //int furllen = CURL_MAX_BUFLEN > strlen(url)+strlen(user)+strlen(passwd) ? CURL_MAX_BUFLEN : strlen(url)+strlen(user)+strlen(passwd);
-    int furllen = strlen(url)+strlen(user)+strlen(passwd);
+    char* escaped_user = (char*)malloc(strlen(user)*3+1); // up to 3 chars, e.g. ' ' => '%20' per original char, and end null
+    char* escaped_passwd = (char*)malloc(strlen(passwd)*3+1); // up to 3 chars, e.g. ' ' => '%20' per original char, and end null
+    urlencode(user,escaped_user);
+    urlencode(passwd,escaped_passwd);
+    int furllen = strlen(url)+strlen(escaped_user)+strlen(escaped_passwd);
     if (furllen > CURL_MAX_BUFLEN) furllen = CURL_MAX_BUFLEN;
-    snprintf(filled_url, furllen, url, user, passwd);
+    snprintf(filled_url, furllen, url, escaped_user, escaped_passwd);
+    free(escaped_user);
+    free(escaped_passwd);
 #ifdef DEBUG
     syslog(LOG_DEBUG, "pwncheck: check: user:%s  password:%s",user,passwd);
     syslog(LOG_DEBUG, "pwncheck: check: Created Filling URL: %s", filled_url);
@@ -158,6 +169,8 @@ pwqual_pwncheck_initvt(krb5_context context, int maj_ver, int min_ver,
 */
     vt = (struct krb5_pwqual_vtable_st *)vtable;
     memset(vt, 0, sizeof *vt);
+
+    init_urlencode();
 
     vt->name  = "pwncheck";
     vt->check = pwqual_pwncheck_check;

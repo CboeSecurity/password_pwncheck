@@ -18,6 +18,8 @@
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
+char rfc3986[256] = {0};
+
 static size_t
 WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
@@ -38,7 +40,40 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
   return realsize;
 }
 
+void init_urlencode(void)
+{
+    int i;
+    for (i = 0; i < 256; i++)
+    {
+        rfc3986[i] = isalnum(i)||i == '~'||i == '-'||i == '.'||i == '_' ? i : 0;
+    }
+}
+
+void urlencode(const char* src, char* encoded)
+{
+    //syslog(LOG_DEBUG,"Got url escape request: %s",src);
+    for (; *src; src++) {
+        if (rfc3986[*src])
+        {
+            sprintf(encoded, "%c", rfc3986[*src]);
+            //syslog(LOG_DEBUG,"std Here: %c: %s",*src,src);
+        }
+        else
+        {
+            sprintf(encoded, "%%%02X", *src);
+            //syslog(LOG_DEBUG,"esc Here: %c: %s",*src,src);
+        }
+        while (*++encoded);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef DEBUG
+int __export queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSSL)
+#else
 int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSSL)
+#endif
 {
     CURL *curl;
     CURLcode res;
@@ -48,8 +83,11 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
  
     curl = curl_easy_init();
     if(curl) {
-        char* escaped_url = curl_easy_escape(curl, dest_url, 0);
-        curl_easy_setopt(curl, CURLOPT_URL, escaped_url);
+        //char* escaped_url = curl_easy_escape(curl, dest_url, 0);
+#ifdef DEBUG
+        syslog(LOG_INFO, "pwncheck: queryUrl: DEBUG: destination url: %s",dest_url);
+#endif
+        curl_easy_setopt(curl, CURLOPT_URL, dest_url);
  
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)chunk); 
@@ -68,7 +106,7 @@ int queryUrl(const char* dest_url, struct MemoryStruct* chunk, int useInsecureSS
             syslog(LOG_ERR, "pwncheck: queryUrl: curl_easy_perform() failed: %s", curl_easy_strerror(res));
  
         /* always cleanup */ 
-        curl_free(escaped_url);
+        //curl_free(escaped_url);
         curl_easy_cleanup(curl);
     }
  
