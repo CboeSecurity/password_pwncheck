@@ -103,7 +103,7 @@ class BreachedHashTest(PasswordTest):
                 hashAlg = eval(algstr)
                 testhash = hashAlg(password)
                 out = self.pwned.find(testhash)
-                print(str(testhash,'utf-8'))
+                #print(str(testhash,'utf-8'))
                 if self.pwned.find(testhash):
                     ret = 100
                     break
@@ -342,7 +342,7 @@ class TokenCheck:
     ####################################################################
     def tokenizePassword(self,password):
         # first -> all special characters (1+) => "!"
-        first = sub('[\\\|\+=!@#$%^&*()\-_{\[\]}`~\'"]+','!',password)
+        first = sub('[\ \\\|\+=!@#$%^&*()\-_{\[\]}`~\'"]+','!',password)
         # second -> all numbers (1+) => "#"
         second = sub('[0-9]+','#',first)
         # uppercase the whole string

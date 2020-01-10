@@ -39,7 +39,19 @@ def logmsg(request,type,message,args):
 
 def getLogDateTime(args):
     if not cfg.debug:
-        args = (re.sub(r'p=.* HTTP',r'p=<redacted> HTTP',args[0]),args[1],args[2])
+         try:
+             if len(args) == 3:
+                 args = (re.sub(r'p=.* HTTP',r'p=<redacted> HTTP',args[0]),args[1],args[2])
+             elif len(args) == 2:
+                 args = (re.sub(r'p=.* HTTP',r'p=<redacted> HTTP',args[0]),args[1])
+         except TypeError as e:
+             print("arg0: %s"%type(args[0]))
+             print("arg1: %s"%type(args[1]))
+             if len(args) == 3:
+                 print("arg2: %s"%type(args[2]))
+             print(args)
+             raise e
+#        args = (re.sub(r'p=.* HTTP',r'p=<redacted> HTTP',args[0]),args[1],args[2])
     return args
 
 #"/" "GET" -> form.html
@@ -54,8 +66,6 @@ def v1CheckPassword():
     if request.method == 'GET':
         username = request.args.get('u','')
         password = request.args.get('p','')
-        print(request.args.get('u',''))
-        print(request.args.get('p',''))
         reserve = True
     elif request.method == 'POST':
         username = request.form.get('u','')
