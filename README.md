@@ -20,7 +20,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ## Password Server
 * The password server needs to have downloaded password hash lists provided to it.  These should sit in the `./db` folder.  A great place to start for your breached passwords is [https://haveibeenpwned.com/Passwords], Thanks to Troy Hunt for all his efforts (he is in large part the inspiration behind this project).
 * Also, make sure you have a valid key/certificate chain.  These two files should have their paths matched with the `SSLCertFile` and `SSLKeyFile` variables.
-* The code is written in python 2.7.  You should be able to run it via `python-2.7 ./pwned-password-server.py`
+* The code was originally written in python 2.7, though now should work in python 3 and __might__ work in python 2.7.  You should be able to run it via `python-2.7 ./pwned-password-server.py`
 
 ## AD Password filter DLL
 * From a Dev Studio command line, run `resbuilder.bat` from its directory in the ad-password-pwncheck project
