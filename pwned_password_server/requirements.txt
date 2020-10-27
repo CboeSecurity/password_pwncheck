@@ -1,7 +1,7 @@
 asn1crypto==0.24.0
 cffi==1.12.3
 Click==7.0
-cryptography==2.7
+cryptography==3.2
 Flask==1.0.3
 itsdangerous==1.1.0
 Jinja2==2.10.1
