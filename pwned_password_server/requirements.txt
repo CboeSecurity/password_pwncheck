@@ -11,4 +11,4 @@ pyOpenSSL==19.0.0
 six==1.12.0
 SQLAlchemy==1.3.5
 virtualenv==15.1.0
-Werkzeug==0.15.4
+Werkzeug==0.15.5
